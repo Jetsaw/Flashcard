@@ -1,223 +1,165 @@
 #include <iostream>
-#include <fstream>
-#include <vector>
 #include <string>
-#include <algorithm>
-#include <limits>
-
+#include <stdlib.h>
 using namespace std;
-
-// FlashCard class - holds individual Q&A and stats
-class FlashCard {
+const int maxnum = 50;
+class Card
+{
 public:
     string question;
     string answer;
-    int difficultyScore; // Higher = harder to recall
-
-    FlashCard() : difficultyScore(0) {}
-    FlashCard(string q, string a) : question(q), answer(a), difficultyScore(0) {}
-
-    void show() const {
-        cout << "Q: " << question << endl;
+    Card()
+    {
+        question = " ";
+        answer = " ";
     }
-
-    void showAnswer() const {
-        cout << "A: " << answer << endl;
+    Card(string q, string a)
+    {
+        question = q;
+        answer = a;
     }
 };
-
-// Deck manager
-class FlashCardDeck {
+class Feedback
+{
 private:
-    vector<FlashCard> cards;
-
 public:
-    void addCard(const FlashCard& card) {
-        cards.push_back(card);
+    int marks;
+    Feedback()
+    {
+        marks = 0;
     }
-
-    vector<FlashCard>& getCards() {
-        return cards;
-    }
-
- 
-    const vector<FlashCard>& getCards() const {
-        return cards;
-    }
-
-    void listCards() {
-        if (cards.empty()) {
-            cout << "No cards available." << endl;
-            return;
-        }
-        cout << "Total flashcards: " << cards.size() << endl;
-        for (size_t i = 0; i < cards.size(); ++i) {
-            cout << i + 1 << ". " << cards[i].question << endl;
-        }
+    Feedback(int m)
+    {
+        marks = m;
     }
 };
-
-// File manager class
-class FileManager {
+class CardsManager
+{
 public:
-    static void save(const FlashCardDeck& deck, const string& filename) {
-        ofstream out(filename, ios::binary);
-        if (!out) {
-            cout << "Error saving file!" << endl;
-            return;
-        }
-
-        const vector<FlashCard>& cards = deck.getCards();
-        size_t size = cards.size();
-        out.write((char*)&size, sizeof(size));
-        for (const auto& card : cards) {
-            size_t qlen = card.question.size();
-            size_t alen = card.answer.size();
-            out.write((char*)&qlen, sizeof(qlen));
-            out.write(card.question.c_str(), qlen);
-            out.write((char*)&alen, sizeof(alen));
-            out.write(card.answer.c_str(), alen);
-            out.write((char*)&card.difficultyScore, sizeof(int));
-        }
-
-        out.close();
-        cout << "Cards saved successfully!" << endl;
+    Card cards[maxnum];
+    Feedback feedbacks[maxnum];
+    int num;
+    CardsManager()
+    {
+        num = 0;
     }
-
-    static void load(FlashCardDeck& deck, const string& filename) {
-        ifstream in(filename, ios::binary);
-        if (!in) {
-            cout << "File not found." << endl;
-            return;
+    void getNewCard(string ques, string ans)
+    {
+        if(num<maxnum)
+        {
+            cards[num] = Card(ques, ans);
+            num++;
+            cout << "\nCard is added successfully!" << endl;
         }
-
-        size_t size;
-        in.read((char*)&size, sizeof(size));
-        for (size_t i = 0; i < size; ++i) {
-            size_t qlen, alen;
-            in.read((char*)&qlen, sizeof(qlen));
-            string q(qlen, ' ');
-            in.read(&q[0], qlen);
-
-            in.read((char*)&alen, sizeof(alen));
-            string a(alen, ' ');
-            in.read(&a[0], alen);
-
-            int diff;
-            in.read((char*)&diff, sizeof(int));
-
-            FlashCard card(q, a);
-            card.difficultyScore = diff;
-            deck.addCard(card);
+        else
+        {
+            cout << "Cannot add more cards. Maximum capacity reached." << endl;
         }
-
-        in.close();
-        cout << "Cards loaded successfully!" << endl;
     }
-};
-
-// Review engine with spaced repetition
-class SpacedRepetitionEngine {
-public:
-    static void reviewCards(FlashCardDeck& deck) {
-        vector<FlashCard>& cards = deck.getCards();
-        if (cards.empty()) {
-            cout << "No cards to review!" << endl;
+    void displayCards()
+    {
+        int point = 0;
+        if (num == 0)
+        {
+            cout << "No cards to display." << endl;
             return;
         }
-
-        // Sort by difficultyScore descending
-        sort(cards.begin(), cards.end(), [](FlashCard& a, FlashCard& b) {
-            return a.difficultyScore > b.difficultyScore;
-        });
-
-        for (auto& card : cards) {
-            card.show();
-            cout << "Press Enter to see the answer...";
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cin.get();
-            card.showAnswer();
-
-            cout << "Did you remember this card? (y/n): ";
-            char choice;
-            cin >> choice;
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
-            if (choice == 'n' || choice == 'N') {
-                card.difficultyScore++;
-            } else {
-                if (card.difficultyScore > 0) card.difficultyScore--;
+        else
+        {
+            cout << "\nTotal Cards = " << num << endl;
+            cout << endl;
+            for(int i=0; i<num; i++)
+            {
+                cout << "Question " << i+1 << ": " << cards[i].question << endl;
+                cout << "Answer " << i+1 << ": " << cards[i].answer << endl;
+                cout << "\nHow well did you know this? (0: Not well, 1: Normal, 2: Perfectly)" << endl;
+                cin >> point;
+                while(point < 0 || point >2)
+                {
+                    cout << "Error. Please try again." << endl;
+                    cin >> point;
+                    if(point == 0 || point == 1 || point == 2 )
+                        break;
+                }
+                feedbacks[i] = Feedback(point);
+                cout << endl;
             }
         }
     }
 };
-
-// User interaction handler
-class FlashCardApp {
+class Process
+{
 private:
-    FlashCardDeck deck;
-    const string filename = "flashcards.dat";
-
+    CardsManager cm;
+    string q;
+    string a;
 public:
-    void run() {
-        int choice;
-        do {
-            showMenu();
-            cin >> choice;
-            cin.ignore();
-
-            switch (choice) {
-                case 1:
-                    addFlashCard();
-                    break;
-                case 2:
-                    deck.listCards();
-                    break;
-                case 3:
-                    FileManager::save(deck, filename);
-                    break;
-                case 4:
-                    FileManager::load(deck, filename);
-                    break;
-                case 5:
-                    SpacedRepetitionEngine::reviewCards(deck);
-                    break;
-                case 6:
-                    cout << "Exiting program." << endl;
-                    break;
-                default:
-                    cout << "Invalid option! Try again.\n";
-            }
-        } while (choice != 6);
-    }
-
-    void showMenu() {
-        cout << "\n=== Digital Flash Card App ===\n";
-        cout << "1. Add New Flashcard\n";
-        cout << "2. List All Flashcards\n";
-        cout << "3. Save Flashcards to File\n";
-        cout << "4. Load Flashcards from File\n";
-        cout << "5. Review Flashcards\n";
-        cout << "6. Exit\n";
-        cout << "Choose an option: ";
-    }
-
-    void addFlashCard() {
-        string q, a;
+    void addQuestion()
+    {
         cout << "Enter Question: ";
-        getline(cin, q);
+        cin >> q;
+    }
+    void addAnswer()
+    {
         cout << "Enter Answer: ";
-        getline(cin, a);
+        cin >> a;
+    }
+    void addCard()
+    {
+        addQuestion();
+        addAnswer();
+        cm.getNewCard(q, a);
+    }
+    void showCard()
+    {
+        cout << "Displaying flashcards..." << endl;
+        cm.displayCards();
+    }
+};
+class Menu
+{
+    int choice;
+    Process p;
+public:
+    Menu()
+    {
+        choice = 0;
+    }
 
-        deck.addCard(FlashCard(q, a));
-        cout << "Flashcard added!" << endl;
+    void showMenu()
+    {
+        while(choice !=3)
+        {
+            cout << "\n===== Flash Card =====" << endl;
+            cout << "1. Add new card" << endl;
+            cout << "2. Display card" << endl;
+            cout << "3. Exit" << endl;
+            cout << "\nEnter choice: ";
+            cin >> choice;
+            system("CLS");
+            switch(choice)
+            {
+            case 1:
+                p.addCard();
+                break;
+            case 2:
+                p.showCard();
+                break;
+            case 3:
+                cout << "Exiting program." << endl;
+                break;
+            default:
+                cout << "Invalid choice! Please try again." << endl;
+            }
+        }
     }
 };
 
-// Entry point
-int main() {
-    FlashCardApp app;
-    app.run();
-    return 1;
+int main()
+{
+    cout << "Hello\n";
+    Menu m1;
+    m1.showMenu();
 }
+
 
